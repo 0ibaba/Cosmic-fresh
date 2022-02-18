@@ -28,7 +28,6 @@ export_env_vars() {
     export PATH="/usr/lib/ccache/bin/:$PATH"
     export CCACHE_SLOPPINESS="file_macro,locale,time_macros"
     export CCACHE_NOHASHDIR="true"
-    export CCACHE_DIR=/mnt/45A15FA43FC33C00/Kernel-Dev/ccache-2
     export CROSS_COMPILE=aarch64-linux-gnu-
     export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
     export CC=${BUILD_PREF_COMPILER}
@@ -73,13 +72,14 @@ verify_toolchain_install() {
     fi
 }
 build_kernel_image() {
+    cleanup
     script_echo " "
     echo -e "${GRN}"
     read -p "Write the Kernel version: " KV
     echo -e "${YELLOW}"
     script_echo 'Building CosmicFresh Kernel For M21'
-    make -C $(pwd) CC=${BUILD_PREF_COMPILER} AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$((`nproc`+1)) M21_defconfig 2>&1 | sed 's/^/     /'
-    make -C $(pwd) CC=${BUILD_PREF_COMPILER} AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$((`nproc`+1)) 2>&1 | sed 's/^/     /'
+    make -C $(pwd) CC=${BUILD_PREF_COMPILER} AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$((`nproc`+1)) LOCALVERSION="—CosmicFresh-R$KV" M21_defconfig 2>&1 | sed 's/^/     /'
+    make -C $(pwd) CC=${BUILD_PREF_COMPILER} AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip -j$((`nproc`+1)) LOCALVERSION="—CosmicFresh-R$KV" 2>&1 | sed 's/^/     /'
     SUCCESS=$?
     echo -e "${RST}"
 
@@ -91,29 +91,42 @@ build_kernel_image() {
         script_echo "Image can be found at out/arch/arm64/boot/Image"
         script_echo  "------------------------------------------------------------"
         build_flashable_zip
-    else
+    elif [ $SUCCESS -eq 130 ]
+    then
+        echo -e "${RED}"
+        script_echo "------------------------------------------------------------"
+        script_echo "Build force stopped by the user."
+        script_echo "------------------------------------------------------------"
+        echo -e "${RST}"
+    elif [ $SUCCESS -eq 1 ]
+    then
         echo -e "${RED}"
         script_echo "------------------------------------------------------------"
         script_echo "Compilation failed..check build logs for errors"
         script_echo "------------------------------------------------------------"
         echo -e "${RST}"
-        rm -rf $(pwd)/out/arch/arm64/boot/Image
+        cleanup
     fi
 }
 build_flashable_zip() {
     script_echo " "
     script_echo "I: Building kernel image..."
     echo -e "${GRN}"
-    rm -f $(pwd)/CosmicFresh/{Image, *.zip, dtb, dtbo.img}
-    cp -r $(pwd)/out/arch/arm64/boot/Image CosmicFresh/Image
-    cp -r $(pwd)/out/arch/arm64/boot/dtbo_exynos.img CosmicFresh/dtbo.img
-    cp -r $(pwd)/out/arch/arm64/boot/dtb_exynos.img CosmicFresh/dtb
+    cp $(pwd)/out/arch/arm64/boot/{Image,dtb_exynos.img,dtbo_exynos.img} CosmicFresh/
+    mv CosmicFresh/dtb_exynos.img CosmicFresh/dtb
+    mv CosmicFresh/dtbo_exynos.img CosmicFresh/dtbo.img
     cd $(pwd)/CosmicFresh/
     zip -r9 "CosmicFresh-R$KV.zip" anykernel.sh META-INF tools version Image dtb dtbo.img
-    cd ../..
-    rm -f $(pwd)/arch/arm64/boot/Image
+    rm -rf {Image,dtb,dtbo.img}
+    cd ../
 }
 
+cleanup() {
+    cd $(pwd)/CosmicFresh/
+    rm -rf {Image,*.zip,dtb,dtbo.img}
+    cd ../
+    rm -rf $(pwd)/out/arch/arm64/boot/*
+}
 add_deps
 export_env_vars
 build_kernel_image
