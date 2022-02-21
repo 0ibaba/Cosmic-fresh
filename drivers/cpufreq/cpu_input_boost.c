@@ -13,22 +13,16 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/version.h>
-#include <linux/ems_service.h>
 
 /* The sched_param struct is located elsewhere in newer kernels */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 #include <uapi/linux/sched/types.h>
 #endif
 
-static struct kpp kpp_ta;
-static struct kpp kpp_fg;
-
 enum {
 	SCREEN_OFF,
 	MAX_BOOST
 };
-
-static int boost_slot;
 
 struct boost_drv {
 	struct delayed_work max_unboost;
@@ -103,9 +97,6 @@ static void __cpu_input_boost_kick_max(struct boost_drv *b,
 	} while (atomic_long_cmpxchg(&b->max_boost_expires, curr_expires,
 				     new_expires) != curr_expires);
 
-	kpp_request(STUNE_TOPAPP, &kpp_ta, 4);
-	kpp_request(STUNE_FOREGROUND, &kpp_fg, 4);
-
 	set_bit(MAX_BOOST, &b->state);
 	if (!mod_delayed_work(system_unbound_wq, &b->max_unboost,
 			      boost_jiffies))
@@ -123,9 +114,6 @@ static void max_unboost_worker(struct work_struct *work)
 {
 	struct boost_drv *b = container_of(to_delayed_work(work),
 					   typeof(*b), max_unboost);
-
-	kpp_request(STUNE_TOPAPP, &kpp_ta, 2);
-	kpp_request(STUNE_FOREGROUND, &kpp_fg, 2);
 
 	clear_bit(MAX_BOOST, &b->state);
 	wake_up(&b->boost_waitq);
@@ -196,21 +184,9 @@ static int fb_notifier_cb(struct notifier_block *nb, unsigned long action,
 
 	/* Boost when the screen turns on and unboost when it turns off */
 	if (*blank == FB_BLANK_UNBLANK) {
-		set_stune_boost("top-app", 2, &boost_slot);
-		set_stune_boost("foreground", 1, &boost_slot);	
-		set_stune_boost("background", -25, &boost_slot);
-		do_prefer_idle("top-app", 1);
-		do_prefer_idle("foreground", 1);
-
 		clear_bit(SCREEN_OFF, &b->state);
 		__cpu_input_boost_kick_max(b, CONFIG_WAKE_BOOST_DURATION_MS);
 	} else {
-		set_stune_boost("top-app", -30, &boost_slot);
-		set_stune_boost("foreground", -30, &boost_slot);	
-		set_stune_boost("background", -30, &boost_slot);
-		do_prefer_idle("top-app", 0);
-		do_prefer_idle("foreground", 0);
-
 		set_bit(SCREEN_OFF, &b->state);
 		wake_up(&b->boost_waitq);
 	}
