@@ -374,7 +374,7 @@ HOSTCXX	= g++
 endif
 HOSTCFLAGS   := -Wall -w -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS)
-HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS)
+HOSTCXXFLAGS := -O3 $(HOST_LFS_CFLAGS)
 HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS)
 HOST_LOADLIBES := $(HOST_LFS_LIBS)
 
@@ -454,10 +454,12 @@ LINUXINCLUDE    := \
 KBUILD_AFLAGS   := -D__ASSEMBLY__ -march=armv8-a+lse
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
-		   -w \
+		   -Wall \
 		   -Wno-format-security \
 		   -Xassembler -march=armv8-a+lse \
 		   -std=gnu89
+
+KBUILD_CFLAGS    += -Werror=vla
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
@@ -887,6 +889,10 @@ else
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 endif
 
+ifeq ($(ld-name),lld)
+LDFLAGS += -O3
+endif
+
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
@@ -1084,6 +1090,15 @@ KBUILD_CFLAGS	+= $(call cc-option,-fgcse-sm)
 # incompatible with -mindirect-branch=thunk-extern
 ifdef CONFIG_RETPOLINE
 KBUILD_CFLAGS += $(call cc-option,-fcf-protection=none)
+endif
+
+# Variable Length Arrays (VLAs) Detection
+# Variable Length Arrays (VLAs) should not be used anywhere in the kernel
+ifdef CONFIG_VLA_WARN_ON_DETECT
+KBUILD_CFLAGS += $(call cc-option,-Wvla)
+endif
+ifdef CONFIG_VLA_ERROR_ON_DETECT
+KBUILD_CFLAGS    += -Werror=vla
 endif
 
 # use the deterministic mode of AR if available

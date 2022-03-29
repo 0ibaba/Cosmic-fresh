@@ -3293,7 +3293,7 @@
 		g3d_genpd_name = "pd-g3d"; /*KC, RM: pd-g3d, LT,MK: pd-embedded_g3d*/
         #cooling-cells = <2>; /* min followed by max */
 		governor = "interactive";
-		interactive_info = <764000 75 0>;
+		interactive_info = <764000 65 0>;
 		gpu_dvfs_table_size = <11 7>; /*<row col>*/
 		/*  8 columns      freq  down   up  stay  mif    little  middle   big  */
 		gpu_dvfs_table = <  1053000    95  100   1  2093000 1638000       0
@@ -3303,10 +3303,10 @@
 		                     683000    53   70   4  1539000 1456000       0
 		                     572000    50   70   1  1539000 1456000       0
 		                     546000    50   70   1  1539000 1456000       0
-		                     455000    54   70   1   676000  702000       0
-		                     385000    56   70   1   546000  598000       0
-		                     338000    48   70   1   419000  403000       0
-		                     260000    48   70   1   419000  403000       0 >;
+		                     455000    54   70   1   676000 1222000       0
+		                     385000    56   70   1   546000 1118000       0
+		                     338000    48   70   1   419000 1053000       0
+		                     260000    48   70   1   419000 1053000       0 >;
 		gpu_sustainable_info = <0 0 0 0 0>;
 		gpu_pmqos_cpu_cluster_num = <2>;
 		gpu_pmu_status_reg_offset = <0x4064>;
@@ -3342,7 +3342,7 @@
 		gpu_bts_support = <1>;
 		gpu_mo_min_clock = <764000>;
 		gpu_boost_gpu_min_lock = <0>;
-		gpu_boost_egl_min_lock = <1248000>;
+		gpu_boost_egl_min_lock = <1456000>;
 		gpu_vk_boost_max_lock = <2000>; /* to activate vk boost, should set proper clock*/
 		gpu_vk_boost_mif_min_lock = <0>;
 		gpu_asv_cali_lock_val = <0>; /*Should check this value when MALI_ASV_CALIBRATION_SUPPORT is enabled*/
@@ -3380,7 +3380,7 @@
 			boost_table = < 0 >;
 			up_rate_limit_table = < 5 >;
 			down_rate_limit_table = < 5 >;
-			upscale_ratio_table = < 60 910000 80 >;
+			upscale_ratio_table = < 60 1534000 80 >;
 		};
 
 		domain@1 {
@@ -3411,7 +3411,7 @@
 			device_type = "cpufreq-userctrl";
 			shared-cpus = "4-7";
 
-			user-default-qos = <936000>;
+			user-default-qos = <1040000>;
 			user-boost = <1>;
 
 			min-limit {
@@ -3470,7 +3470,7 @@
 			cal-id = <ACPM_DVFS_CPUCL0>;
 			dm-type = <DM_CPU_CL0>;
 
-			min-freq = <702000>;
+			min-freq = <1053000>;
 
 			/* PM QoS Class ID */
 			pm_qos-min-class = <3>;
@@ -3478,7 +3478,7 @@
 
 			user-boost = <0>;
 
-			user-default-qos = <702000>;	/* 715000 for Lhotse */
+			user-default-qos = <1222000>;	/* 715000 for Lhotse */
 
 			#cooling-cells = <2>; /* min followed by max */
 
@@ -3509,7 +3509,7 @@
 			cal-id = <ACPM_DVFS_CPUCL1>;
 			dm-type = <DM_CPU_CL1>;
 
-			min-freq = <936000>;
+			min-freq = <1040000>;
 
 			/* PM QoS Class ID */
 			pm_qos-min-class = <5>;

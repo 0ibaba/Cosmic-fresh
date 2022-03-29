@@ -13,6 +13,7 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/sched/clock.h>
+#include <linux/sched/idle.h>
 #include <linux/notifier.h>
 #include <linux/pm_qos.h>
 #include <linux/cpu.h>
@@ -677,12 +678,11 @@ int cpuidle_register(struct cpuidle_driver *drv,
 EXPORT_SYMBOL_GPL(cpuidle_register);
 
 #ifdef CONFIG_SMP
-
 /*
  * This function gets called when a part of the kernel has a new latency
- * requirement.  This means we need to get all processors out of their C-state,
- * and then recalculate a new suitable C-state. Just do a cross-cpu IPI; that
- * wakes them all right up.
+ * requirement.  This means we need to get only those processors out of their
+ * C-state for which qos requirement is changed, and then recalculate a new
+ * suitable C-state. Just do a cross-cpu IPI; that wakes them all right up.
  */
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)

@@ -542,8 +542,9 @@ config MEM_SOFT_DIRTY
 config ZSWAP
 	bool "Compressed cache for swap pages (EXPERIMENTAL)"
 	depends on FRONTSWAP && CRYPTO=y
-	select CRYPTO_LZO
+	depends on CRYPTO_LZ4 || CRYPTO_ZSTD || CRYPTO_LZO
 	select ZPOOL
+	select BTREE
 	default n
 	help
 	  A lightweight compressed cache for swap pages.  It takes
@@ -558,6 +559,31 @@ config ZSWAP
 	  interactions don't cause any known issues on simple memory setups,
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
+
+choice
+        prompt "Default zswap compressor"
+        default ZSWAP_DEF_COMP_LZ4
+        depends on ZSWAP
+
+config ZSWAP_DEF_COMP_LZ4
+        bool "lz4"
+        depends on CRYPTO_LZ4
+
+config ZSWAP_DEF_COMP_ZSTD
+        bool "zstd"
+        depends on CRYPTO_ZSTD
+
+config ZSWAP_DEF_COMP_LZO
+        bool "lzo"
+        depends on CRYPTO_LZO
+
+endchoice
+
+config ZSWAP_DEF_COMP
+       string
+        default "lzo" if ZSWAP_DEF_COMP_LZO
+        default "zstd" if ZSWAP_DEF_COMP_ZSTD
+        default "lz4" if ZSWAP_DEF_COMP_LZ4
 
 config ZPOOL
 	tristate "Common API for compressed memory storage"
@@ -598,19 +624,6 @@ config ZSMALLOC
 	  returned by an alloc().  This handle must be mapped in order to
 	  access the allocated space.
 
-config PGTABLE_MAPPING
-	bool "Use page table mapping to access object in zsmalloc"
-	depends on ZSMALLOC
-	help
-	  By default, zsmalloc uses a copy-based object mapping method to
-	  access allocations that span two pages. However, if a particular
-	  architecture (ex, ARM) performs VM mapping faster than copying,
-	  then you should select this. This causes zsmalloc to use page table
-	  mapping rather than copying for object mapping.
-
-	  You can check speed with zsmalloc benchmark:
-	  https://github.com/spartacus06/zsmapbench
-
 config ZSMALLOC_STAT
 	bool "Export zsmalloc statistics"
 	depends on ZSMALLOC
@@ -620,6 +633,31 @@ config ZSMALLOC_STAT
 	  statistics about whats happening in zsmalloc and exports that
 	  information to userspace via debugfs.
 	  If unsure, say N.
+
+config DIRECT_RECLAIM_FILE_PAGES_ONLY
+	bool "Reclaim file pages only on direct reclaim path"
+	depends on ZSWAP
+	default n
+
+config INCREASE_MAXIMUM_SWAPPINESS
+	bool "Allow swappiness to be set up to 200"
+	depends on ZSWAP
+	default n
+
+config FIX_INACTIVE_RATIO
+	bool "Fix active:inactive anon ratio to 1:1"
+	depends on ZSWAP
+	default n
+
+config SWAP_ENABLE_READAHEAD
+	bool "Enable readahead on page swap in"
+	depends on SWAP
+	default y
+	help
+	  When a page fault occurs, adjacent pages of SWAP_CLUSTER_MAX are
+	  also paged in expecting those pages will be used in near future.
+	  This behaviour is good at disk-based system, but not on in-memory
+	  compression (e.g. zram).
 
 config GENERIC_EARLY_IOREMAP
 	bool
@@ -764,10 +802,6 @@ config PERCPU_STATS
 	  information includes global and per chunk statistics, which can
 	  be used to help understand percpu memory usage.
 
-config INCREASE_MAXIMUM_SWAPPINESS
-	bool "Allow swappiness to be set up to 200"
-	depends on SWAP
-	default y
 
 # IOPP-dirty_buffer-v2.0.4.14
 config LARGE_DIRTY_BUFFER
@@ -786,10 +820,6 @@ config MAX_DIRTY_THRESH_PAGES
 	  It is only effective when dirty_ratio is used.
 	  (Setting dirty_bytes disables this option.)
 
-config DIRECT_RECLAIM_FILE_PAGES_ONLY
-	bool "Reclaim file pages only on direct reclaim path"
-	depends on SWAP
-	default y
 
 config VMSTAT_INTERVAL
 	int "Default interval in seconds to update vmstat"
@@ -820,26 +850,6 @@ config MMAP_READAROUND_LIMIT
 	  during the sluggish situation. Add the hard upper-limit for
 	  mmap readaround.
 
-config SWAP_ENABLE_READAHEAD
-	bool "Enable readahead on page swap in"
-	depends on SWAP
-	default y
-	help
-	  When a page fault occurs, adjacent pages are also paged in
-          expecting those pages will be used in near future.
-
-config KANOND
-	bool "Support kanond"
-	default n
-	help
-	  Support kanond kernel thread which does anonymous swapping.
-
-config KANOND_FORCE_SIZE
-	int "Set kanond required size by force"
-	depends on KANOND
-	default 0
-	help
-	  Instead of default size, for to use this size"
 
 config BOOT_MEMORY_PARAM
 	bool "keep more free memory at boot-time"

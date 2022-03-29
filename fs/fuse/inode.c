@@ -321,7 +321,7 @@ struct inode *fuse_iget(struct super_block *sb, u64 nodeid,
 		unlock_new_inode(inode);
 	} else if ((inode->i_mode ^ attr->mode) & S_IFMT) {
 		/* Inode has changed type, any I/O on the old should fail */
-		make_bad_inode(inode);
+		fuse_make_bad(inode);
 		iput(inode);
 		goto retry;
 	}
@@ -1200,6 +1200,7 @@ static int fuse_fill_super(struct super_block *sb, void *data, int silent)
 	fuse_conn_put(fc);
 	sb->s_fs_info = NULL;
  err_fput:
+ 	kfree(fc);
 	fput(file);
  err:
 	return err;

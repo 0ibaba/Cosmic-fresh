@@ -184,7 +184,7 @@ static __u32 get_hw_version(struct g2d_device *g2d_dev, __u32 *version)
 		return ret;
 	}
 
-	ret = clk_enable(g2d_dev->clock);
+	ret = clk_prepare_enable(g2d_dev->clock);
 	if (ret < 0) {
 		perrdev(g2d_dev, "Failed to enable clock (%d)", ret);
 	} else {
@@ -281,7 +281,7 @@ static int g2d_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static long g2d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long __g2d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct g2d_context *ctx = filp->private_data;
 	struct g2d_device *g2d_dev = ctx->g2d_dev;
@@ -443,6 +443,21 @@ static long g2d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	}
 	}
+
+	return ret;
+}
+
+static long g2d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	struct pm_qos_request req = {
+		.type = PM_QOS_REQ_AFFINE_CORES,
+		.cpus_affine = BIT(raw_smp_processor_id())
+	};
+	long ret;
+
+	pm_qos_add_request(&req, PM_QOS_CPU_DMA_LATENCY, 100);
+	ret = __g2d_ioctl(filp, cmd, arg);
+	pm_qos_remove_request(&req);
 
 	return ret;
 }
@@ -1035,10 +1050,6 @@ static int g2d_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int g2d_runtime_resume(struct device *dev)
 {
-	struct g2d_device *g2d_dev = dev_get_drvdata(dev);
-
-	clk_prepare(g2d_dev->clock);
-
 	return 0;
 }
 
